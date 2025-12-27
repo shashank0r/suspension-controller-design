@@ -1,0 +1,48 @@
+function c = Damper_Controller(zs, zu, vs, vu, as, au)
+
+c_min = 800;
+c_mid = 1500;
+c_max = 3200;
+
+a_th = 1.5;
+z_th = 0.02;
+
+T_hold = 0.1;
+Ts = 0.02;
+
+persistent impact_timer
+if isempty(impact_timer)
+    impact_timer = 0;
+end
+
+z_rel = zs - zu;
+v_rel = vs - vu;
+
+impact = (abs(as) > a_th) || (abs(z_rel) > z_th);
+
+if impact
+    impact_timer = T_hold;
+else
+    impact_timer = max(impact_timer - 1.5*Ts, 0);
+end
+
+compression = (z_rel < 0) && (v_rel > 0);
+rebound     = (z_rel > 0) && (v_rel > 0);
+
+body_ok  = (as * v_rel) > 0;
+wheel_ok = (au * v_rel) < 0;
+
+if impact_timer > 0
+    c = c_max;
+
+elseif rebound
+    c = 0.8 * c_max;
+
+elseif body_ok && wheel_ok
+    c = c_mid;
+
+else
+    c = c_min;
+end
+
+end
